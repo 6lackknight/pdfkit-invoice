@@ -1,6 +1,7 @@
 const fs = require("fs");
 const PDFDocument = require("pdfkit");
 
+
 function createInvoice(invoice, path) {
   let doc = new PDFDocument({ size: "A4", margin: 50 });
 
@@ -15,26 +16,25 @@ function createInvoice(invoice, path) {
 
 function generateHeader(doc) {
   doc
-    .image("logo.png", 50, 45, { width: 50 })
-    .fillColor("#444444")
-    .fontSize(20)
-    .text("ACME Inc.", 110, 57)
-    .fontSize(10)
-    .text("ACME Inc.", 200, 50, { align: "right" })
-    .text("123 Main Street", 200, 65, { align: "right" })
-    .text("New York, NY, 10025", 200, 80, { align: "right" })
+    .image("logo.png", 50, 45, { width: 120, height: 30 })
+    .text(company.name, 200, 50, { align: "right" })
+    .font("Helvetica")
+    .text(company.address1, 200, 65, { align: "right" })
+    .text(company.address2, 200, 80, { align: "right" })
+    .text(company.address3, 200, 95, { align: "right" })
     .moveDown();
 }
 
 function generateCustomerInformation(doc, invoice) {
+  invoice.customer = customer;
   doc
     .fillColor("#444444")
     .fontSize(20)
-    .text("Invoice", 50, 160);
+    .text("Invoice", 50, 140);
 
-  generateHr(doc, 185);
+  generateHr(doc, 165);
 
-  const customerInformationTop = 200;
+  const customerInformationTop = 180;
 
   doc
     .fontSize(10)
@@ -52,51 +52,70 @@ function generateCustomerInformation(doc, invoice) {
     )
 
     .font("Helvetica-Bold")
-    .text(invoice.shipping.name, 300, customerInformationTop)
+    .text(invoice.customer.name, 300, customerInformationTop)
     .font("Helvetica")
-    .text(invoice.shipping.address, 300, customerInformationTop + 15)
+    .text(invoice.customer.address2, 300, customerInformationTop + 15)
     .text(
-      invoice.shipping.city +
-        ", " +
-        invoice.shipping.state +
-        ", " +
-        invoice.shipping.country,
+      invoice.customer.address3,
       300,
       customerInformationTop + 30
     )
     .moveDown();
 
-  generateHr(doc, 252);
+  generateHr(doc, 242);
 }
 
 function generateInvoiceTable(doc, invoice) {
   let i;
-  const invoiceTableTop = 330;
+  const invoiceTableTop = 280;
 
   doc.font("Helvetica-Bold");
+
   generateTableRow(
     doc,
     invoiceTableTop,
-    "Item",
-    "Description",
-    "Unit Cost",
-    "Quantity",
-    "Line Total"
+    "Date",
+    // "Employee",
+    "Advance ID",
+    "Amount",
+    "Fees",
+    "Total"
   );
   generateHr(doc, invoiceTableTop + 20);
   doc.font("Helvetica");
 
   for (i = 0; i < invoice.items.length; i++) {
     const item = invoice.items[i];
-    const position = invoiceTableTop + (i + 1) * 30;
+
+    let position = invoiceTableTop + (i + 1) * 30;
+
+    if (position > 680) {
+      position = invoiceTableTop;
+      doc.addPage();
+      doc.font("Helvetica-Bold");
+
+      generateTableRow(
+        doc,
+        invoiceTableTop,
+        "Date",
+        // "Employee",
+        "Advance ID",
+        "Amount",
+        "Fees",
+        "Total"
+      );
+      generateHr(doc, 80);
+    }
+
     generateTableRow(
       doc,
       position,
-      item.item,
-      item.description,
-      formatCurrency(item.amount / item.quantity),
-      item.quantity,
-      formatCurrency(item.amount)
+      item.$createdAt.substring(0, 10),
+      // item.name,
+      item.$id,
+      formatCurrency(item.amount),
+      formatCurrency(item.fees),
+      formatCurrency(item.total)
     );
 
     generateHr(doc, position + 20);
@@ -139,14 +158,17 @@ function generateInvoiceTable(doc, invoice) {
 }
 
 function generateFooter(doc) {
+  generateHr(doc, 700);
+
   doc
     .fontSize(10)
-    .text(
-      "Payment is due within 15 days. Thank you for your business.",
-      50,
-      780,
-      { align: "center", width: 500 }
-    );
+    .text(company.address1, 50, 726, { align: "left" })
+    .text(company.address1, 50, 740, { align: "left" })
+    .text(company.address2, 50, 754, { align: "left" })
+    .text(company.address3, 50, 768, { align: "left" })
+    .font("Helvetica-Bold")
+    .text("Banking Details:", 50, 712, { align: "left" });
+
 }
 
 function generateTableRow(
@@ -177,7 +199,7 @@ function generateHr(doc, y) {
 }
 
 function formatCurrency(cents) {
-  return "$" + (cents / 100).toFixed(2);
+  return "R" + (cents / 100).toFixed(2);
 }
 
 function formatDate(date) {
